@@ -242,7 +242,7 @@ export default function Eye({ position }: EyeProps) {
                 {/* Top Lid */}
                 <mesh ref={topLidRef} rotation={[-Math.PI / 2, 0, 0]}>
                     <sphereGeometry args={[EYELID_RADIUS, 64, 64, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                    <meshStandardMaterial color="#ffccaa" side={THREE.DoubleSide} roughness={0.3} subsurfacescattering={true} />
+                    <meshPhysicalMaterial color="#ffccaa" side={THREE.DoubleSide} roughness={0.3} reflectivity={0.5} sheen={0.2} sheenColor="#ffffff" />
                     {/* Eyelashes Top - Tapered Tubes instead of Rings */}
                     <mesh position={[0, 0.95, 0.3]} rotation={[0.4, 0, 0]}>
                         <torusGeometry args={[EYELID_RADIUS, 0.02, 16, 100, Math.PI]} />
@@ -253,7 +253,7 @@ export default function Eye({ position }: EyeProps) {
                 {/* Bottom Lid */}
                 <mesh ref={bottomLidRef} rotation={[Math.PI / 2, 0, 0]}>
                     <sphereGeometry args={[EYELID_RADIUS, 64, 64, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                    <meshStandardMaterial color="#ffccaa" side={THREE.DoubleSide} roughness={0.3} subsurfacescattering={true} />
+                    <meshPhysicalMaterial color="#ffccaa" side={THREE.DoubleSide} roughness={0.3} reflectivity={0.5} sheen={0.2} sheenColor="#ffffff" />
                     {/* Eyelashes Bottom */}
                     <mesh position={[0, 0.85, -0.3]} rotation={[-0.2, 0, 0]}>
                         <torusGeometry args={[EYELID_RADIUS, 0.015, 16, 100, Math.PI]} />
