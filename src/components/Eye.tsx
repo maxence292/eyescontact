@@ -52,8 +52,9 @@ export default function Eye({ position }: EyeProps) {
                 node.castShadow = false;
                 node.receiveShadow = false;
             }
-            // 2. Casing (White Plastic)
-            else if (key.includes('Eyeball_Segment_Low_Poly')) {
+            // 2. Casing & Eye White (White Plastic)
+            // Broaden match to catch the casing (likely Eyeball_Segment002 or Cube) and the sclera
+            else if (key.includes('Eyeball') || key.includes('Cube') || key.includes('Clip')) {
                 node.material = new THREE.MeshStandardMaterial({
                     color: '#f5f5f5',
                     roughness: 0.3,
