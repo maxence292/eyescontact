@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls, ContactShadows } from "@react-three/drei";
 import Eyes from "./Eyes";
 import { Suspense } from "react";
+import ErrorBoundary from "./ErrorBoundary";
 
 export default function Experience() {
     return (
@@ -22,7 +23,9 @@ export default function Experience() {
                     <pointLight position={[10, 10, 10]} intensity={1.5} castShadow shadow-mapSize={1024} />
                     <pointLight position={[-10, -10, -10]} intensity={0.5} color="blue" />
 
-                    <Eyes />
+                    <ErrorBoundary fallback={<mesh><boxGeometry /><meshStandardMaterial color="red" /></mesh>}>
+                        <Eyes />
+                    </ErrorBoundary>
 
                     <ContactShadows position={[0, -2, 0]} opacity={0.5} scale={10} blur={2.5} far={4} />
                     <OrbitControls enableZoom={false} enablePan={false} />
