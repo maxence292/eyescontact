@@ -1,25 +1,31 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Environment, OrbitControls } from "@react-three/drei";
+import { Environment, OrbitControls, ContactShadows } from "@react-three/drei";
 import Eyes from "./Eyes";
 import { Suspense } from "react";
 
 export default function Experience() {
     return (
-        <div className="w-full h-full">
+        <div className="w-full h-full bg-[#f0f0f0]">
             <Canvas
                 shadows
-                camera={{ position: [0, 0, 10], fov: 45 }}
-                gl={{ antialias: true, alpha: true }}
+                camera={{ position: [0, 0, 8], fov: 40 }}
+                gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
             >
-                <color attach="background" args={["#f0f0f0"]} />
                 <Suspense fallback={null}>
-                    <Environment preset="studio" />
-                    <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} intensity={1} />
+                    {/* Rich Environment for Reflections */}
+                    <Environment preset="city" background={false} blur={0.8} />
+
+                    {/* Main Light */}
+                    <ambientLight intensity={0.7} />
+                    <pointLight position={[10, 10, 10]} intensity={1.5} castShadow shadow-mapSize={1024} />
+                    <pointLight position={[-10, -10, -10]} intensity={0.5} color="blue" />
+
                     <Eyes />
-                    <OrbitControls enableZoom={false} />
+
+                    <ContactShadows position={[0, -2, 0]} opacity={0.5} scale={10} blur={2.5} far={4} />
+                    <OrbitControls enableZoom={false} enablePan={false} />
                 </Suspense>
             </Canvas>
         </div>

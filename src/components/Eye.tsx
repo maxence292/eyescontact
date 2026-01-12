@@ -32,8 +32,9 @@ export default function Eye({ position }: EyeProps) {
 
         // --- 1. MOUSE TRACKING & PHYSICS ---
         // Convert -1..1 pointer to rotation angles
-        const targetX = -state.pointer.y * 0.6;
-        const targetY = state.pointer.x * 0.6; // No mirror for now, following cursor directly
+        // Increased sensitivity (1.5 factor) so eyes really follow the cursor to edges
+        const targetX = -state.pointer.y * 1.2;
+        const targetY = state.pointer.x * 1.2;
 
         // Add microsaccades (jitter)
         const time = state.clock.elapsedTime;
@@ -54,21 +55,18 @@ export default function Eye({ position }: EyeProps) {
         }
 
         // Smooth damping (lerp)
-        // Adjust speed based on mood (Tired = slow)
         let finalTargetX = targetX + jitterX;
         let finalTargetY = targetY + jitterY;
 
         // Cross-eyed override
         if (mood === 'cross') {
-            // Simple heuristic: look inwards.
-            // If eye is on left (pos < 0), look right (positive Y rotation).
-            // If eye is on right (pos > 0), look left (negative Y rotation).
             const isLeftEye = position[0] < 0;
-            finalTargetY = isLeftEye ? 0.3 : -0.3; // 20-ish degrees inward
-            finalTargetX = 0.0; // Level
+            finalTargetY = isLeftEye ? 0.35 : -0.35;
+            finalTargetX = 0.0;
         }
 
-        const trackingSpeed = mood === 'tired' || isSleeping ? 0.02 : 0.15;
+        // Faster tracking for "snappier" feel (0.2)
+        const trackingSpeed = mood === 'tired' || isSleeping ? 0.03 : 0.2;
         currentRotation.current.x = THREE.MathUtils.lerp(currentRotation.current.x, finalTargetX, trackingSpeed);
         currentRotation.current.y = THREE.MathUtils.lerp(currentRotation.current.y, finalTargetY, trackingSpeed);
 
@@ -81,33 +79,33 @@ export default function Eye({ position }: EyeProps) {
         // Modulate blink frequency by mood
         let blinkInterval = 3000;
         if (mood === 'suspicious') blinkInterval = 4000;
-        if (mood === 'surprised') blinkInterval = 5000; // Stare
-        if (mood === 'tired') blinkInterval = 1000;     // Struggle to keep eyes open
+        if (mood === 'surprised') blinkInterval = 5000;
+        if (mood === 'tired') blinkInterval = 1000;
 
         if (now > nextBlink.current && !blinkState.current.isBlinking) {
             blinkState.current.isBlinking = true;
             blinkState.current.startTime = now;
-            blinkState.current.duration = 0.1 + Math.random() * 0.05;
-            if (mood === 'tired') blinkState.current.duration = 0.4; // Slow blink
+            blinkState.current.duration = 0.12 + Math.random() * 0.05;
+            if (mood === 'tired') blinkState.current.duration = 0.4;
 
             nextBlink.current = now + Math.random() * blinkInterval + 1000;
         }
 
-        // Determine target lid angles based on MOOD
-        let openAngleTop = -Math.PI / 2.5; // Default open
-        let openAngleBot = Math.PI / 2.5;
+        // Determine target lid angles
+        let openAngleTop = -Math.PI / 2.6; // Slightly more open
+        let openAngleBot = Math.PI / 2.6;
 
         if (mood === 'suspicious') {
-            openAngleTop = -Math.PI / 3.5; // Squint top
-            openAngleBot = Math.PI / 3.5;  // Squint bot
+            openAngleTop = -Math.PI / 3.5;
+            openAngleBot = Math.PI / 3.5;
         } else if (mood === 'surprised') {
-            openAngleTop = -Math.PI / 2.1; // Wide open
+            openAngleTop = -Math.PI / 2.1;
             openAngleBot = Math.PI / 2.1;
         } else if (mood === 'tired' || isSleeping) {
-            openAngleTop = -Math.PI / 4;   // Droopy
-            openAngleBot = Math.PI / 2.5; // Bot stays same-ish or rises
+            openAngleTop = -Math.PI / 4;
+            openAngleBot = Math.PI / 2.5;
             if (isSleeping) {
-                openAngleTop = 0; // Closed
+                openAngleTop = 0;
                 openAngleBot = 0;
             }
         }
@@ -136,25 +134,24 @@ export default function Eye({ position }: EyeProps) {
             currentTop = THREE.MathUtils.lerp(openAngleTop, maxCloseAngle, eased);
             currentBot = THREE.MathUtils.lerp(openAngleBot, -maxCloseAngle, eased);
         } else {
-            // Smooth transition to mood state (in case mood changes without blink)
-            topLidRef.current.rotation.x = THREE.MathUtils.lerp(topLidRef.current.rotation.x, openAngleTop, 0.1);
-            bottomLidRef.current.rotation.x = THREE.MathUtils.lerp(bottomLidRef.current.rotation.x, openAngleBot, 0.1);
-            // Pupil Dilation
+            // Smooth transition
+            topLidRef.current.rotation.x = THREE.MathUtils.lerp(topLidRef.current.rotation.x, openAngleTop, 0.15);
+            bottomLidRef.current.rotation.x = THREE.MathUtils.lerp(bottomLidRef.current.rotation.x, openAngleBot, 0.15);
+
             let targetScale = 1;
-            if (mood === 'surprised') targetScale = 0.5; // Constrict
+            if (mood === 'surprised') targetScale = 0.5;
             if (mood === 'suspicious') targetScale = 0.8;
             if (mood === 'tired') targetScale = 0.9;
 
             pupilRef.current.scale.setScalar(THREE.MathUtils.lerp(pupilRef.current.scale.x, targetScale, 0.1));
-            return; // Skip direct assignment below, let lerp handle it
+            return;
         }
 
         topLidRef.current.rotation.x = currentTop;
         bottomLidRef.current.rotation.x = currentBot;
 
-        // Pupil Dilation
         let targetScale = 1;
-        if (mood === 'surprised') targetScale = 0.5; // Constrict
+        if (mood === 'surprised') targetScale = 0.5;
         if (mood === 'suspicious') targetScale = 0.8;
         if (mood === 'tired') targetScale = 0.9;
 
@@ -165,91 +162,102 @@ export default function Eye({ position }: EyeProps) {
     const SCLERA_RADIUS = 1;
     const IRIS_RADIUS = 0.55;
     const PUPIL_RADIUS = 0.25;
-    const CORNEA_RADIUS = SCLERA_RADIUS * 1.02; // Slightly bulge out
-    const EYELID_RADIUS = SCLERA_RADIUS * 1.03; // Just outside cornea
+    const EYELID_RADIUS = SCLERA_RADIUS * 1.02;
 
     return (
         <group ref={eyeRef} position={position}>
-            {/* Eyeball Wrapper - This will rotate to track the mouse */}
+            {/* Eyeball Wrapper */}
             <group ref={eyeballRef}>
                 {/* Sclera (White part) */}
                 <mesh
                     castShadow
                     receiveShadow
                     onClick={() => {
-                        // Force blink / Flinch
                         blinkState.current.isBlinking = true;
                         blinkState.current.startTime = Date.now();
-                        blinkState.current.duration = 0.15; // Fast flinch
+                        blinkState.current.duration = 0.15;
                     }}
                     onPointerOver={() => document.body.style.cursor = 'pointer'}
                     onPointerOut={() => document.body.style.cursor = 'auto'}
                 >
                     <sphereGeometry args={[SCLERA_RADIUS, 64, 64]} />
+                    {/* Porcelain-like Sclera */}
                     <meshPhysicalMaterial
-                        color="#ffffff"
-                        roughness={0.1}
-                        metalness={0.0}
-                        transmission={0.0}
-                        thickness={2.5}
+                        color="#fff0e5" // Slightly warm white
+                        roughness={0.2}
+                        metalness={0.1}
+                        transmission={0}
                         clearcoat={1.0}
                         clearcoatRoughness={0.1}
-                        sheen={0.2}
-                        sheenColor="#ffaaaa"
                     />
                 </mesh>
 
-                {/* Iris */}
-                <mesh ref={irisRef} position={[0, 0, SCLERA_RADIUS - 0.08]} rotation={[0, 0, 0]}>
+                {/* Iris - Multi-layered */}
+                <mesh ref={irisRef} position={[0, 0, SCLERA_RADIUS - 0.05]} rotation={[0, 0, 0]}>
                     <circleGeometry args={[IRIS_RADIUS, 64]} />
-                    <meshStandardMaterial color="#4A90E2" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+                    <meshStandardMaterial color="#3b82f6" roughness={0.4} metalness={0.2} side={THREE.DoubleSide} />
+                    {/* Inner Iris Detail */}
+                    <mesh position={[0, 0, 0.01]}>
+                        <ringGeometry args={[PUPIL_RADIUS, IRIS_RADIUS - 0.05, 64]} />
+                        <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
+                    </mesh>
                 </mesh>
 
                 {/* Pupil */}
-                <mesh ref={pupilRef} position={[0, 0, SCLERA_RADIUS - 0.07]} rotation={[0, 0, 0]}>
+                <mesh ref={pupilRef} position={[0, 0, SCLERA_RADIUS - 0.04]} rotation={[0, 0, 0]}>
                     <circleGeometry args={[PUPIL_RADIUS, 64]} />
                     <meshStandardMaterial color="#000000" roughness={0.0} side={THREE.DoubleSide} />
                 </mesh>
 
-                {/* Cornea (Glassy outer layer) */}
+                {/* Cornea (Glassy bulging outer layer) - CRITICAL for "Wet" look */}
                 <mesh>
-                    <sphereGeometry args={[SCLERA_RADIUS * 1.01, 64, 64, 0, Math.PI * 2, 0, 1.2]} />
+                    {/* Bulge it out slightly more at the front */}
+                    <sphereGeometry args={[SCLERA_RADIUS * 1.01, 64, 64]} />
                     <meshPhysicalMaterial
-                        color="#ffffff"
                         roughness={0}
                         metalness={0}
-                        transmission={0.95} // Glass-like
-                        transparent
-                        opacity={0.3}
-                        ior={1.5}
-                        thickness={0.5}
+                        transmission={1} // Fully transparent glass
+                        thickness={0.8} // Refraction depth
+                        ior={1.4} // Water/Cornea index
                         clearcoat={1}
                         clearcoatRoughness={0}
+                        opacity={1}
+                        transparent={false} // Use transmission instead of alpha blending for better glass
                     />
+                </mesh>
+
+                {/* Fake Specular Highlight (Cartoon Catchlight) */}
+                <mesh position={[0.4, 0.4, SCLERA_RADIUS]} rotation={[0, 0, 0]}>
+                    <circleGeometry args={[0.08, 32]} />
+                    <meshBasicMaterial color="#ffffff" opacity={0.9} transparent />
+                </mesh>
+                <mesh position={[0.55, 0.5, SCLERA_RADIUS]} rotation={[0, 0, 0]}>
+                    <circleGeometry args={[0.03, 32]} />
+                    <meshBasicMaterial color="#ffffff" opacity={0.8} transparent />
                 </mesh>
             </group>
 
-            {/* Eyelids - Fixed orientation relative to socket, only rotate x for blinking */}
+            {/* Eyelids */}
             <group rotation={[0, 0, 0]}>
                 {/* Top Lid */}
                 <mesh ref={topLidRef} rotation={[-Math.PI / 2, 0, 0]}>
                     <sphereGeometry args={[EYELID_RADIUS, 64, 64, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                    <meshStandardMaterial color="#e0a080" side={THREE.DoubleSide} roughness={0.5} />
-                    {/* Eyelashes Top */}
-                    <mesh position={[0, 0.9, 0.4]} rotation={[0.4, 0, 0]}>
-                        <ringGeometry args={[EYELID_RADIUS, EYELID_RADIUS + 0.15, 64, 1, 0, Math.PI]} />
-                        <meshStandardMaterial color="#000000" side={THREE.DoubleSide} />
+                    <meshStandardMaterial color="#ffccaa" side={THREE.DoubleSide} roughness={0.3} subsurfacescattering={true} />
+                    {/* Eyelashes Top - Tapered Tubes instead of Rings */}
+                    <mesh position={[0, 0.95, 0.3]} rotation={[0.4, 0, 0]}>
+                        <torusGeometry args={[EYELID_RADIUS, 0.02, 16, 100, Math.PI]} />
+                        <meshStandardMaterial color="#1a1a1a" roughness={0.9} />
                     </mesh>
                 </mesh>
 
                 {/* Bottom Lid */}
                 <mesh ref={bottomLidRef} rotation={[Math.PI / 2, 0, 0]}>
                     <sphereGeometry args={[EYELID_RADIUS, 64, 64, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                    <meshStandardMaterial color="#e0a080" side={THREE.DoubleSide} roughness={0.5} />
-                    {/* Eyelashes Bottom (Subtler) */}
-                    <mesh position={[0, 0.8, -0.4]} rotation={[-0.2, 0, 0]}>
-                        <ringGeometry args={[EYELID_RADIUS, EYELID_RADIUS + 0.05, 64, 1, 0, Math.PI]} />
-                        <meshStandardMaterial color="#000000" side={THREE.DoubleSide} />
+                    <meshStandardMaterial color="#ffccaa" side={THREE.DoubleSide} roughness={0.3} subsurfacescattering={true} />
+                    {/* Eyelashes Bottom */}
+                    <mesh position={[0, 0.85, -0.3]} rotation={[-0.2, 0, 0]}>
+                        <torusGeometry args={[EYELID_RADIUS, 0.015, 16, 100, Math.PI]} />
+                        <meshStandardMaterial color="#1a1a1a" roughness={0.9} />
                     </mesh>
                 </mesh>
             </group>
