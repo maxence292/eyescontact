@@ -3,7 +3,7 @@
 import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useGraph } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { useGLTF, useTexture, Html } from "@react-three/drei";
 import { useEyeState } from "@/hooks/useEyeState";
 
 interface EyeProps {
@@ -106,6 +106,15 @@ export default function Eye({ position }: EyeProps) {
             <group ref={groupRef}>
                 <primitive object={clone} scale={[1, 1, 1]} />
             </group>
+            {/* Debug Overlay for Node Names */}
+            <Html position={[0, 2, 0]} center>
+                <div style={{ background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', fontSize: '10px', width: '300px', maxHeight: '400px', overflow: 'auto' }}>
+                    <strong>Nodes:</strong>
+                    {Object.keys(nodes).map((key) => (
+                        <div key={key}>{key}</div>
+                    ))}
+                </div>
+            </Html>
         </group>
     );
 }
