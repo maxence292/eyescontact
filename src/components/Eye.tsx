@@ -3,7 +3,7 @@
 import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useGraph } from "@react-three/fiber";
-import { useGLTF, useTexture, Html } from "@react-three/drei";
+import { useGLTF, useTexture } from "@react-three/drei";
 import { useEyeState } from "@/hooks/useEyeState";
 
 interface EyeProps {
@@ -29,29 +29,63 @@ export default function Eye({ position }: EyeProps) {
     textures.emission.flipY = false;
     textures.emission.colorSpace = THREE.SRGBColorSpace;
 
-    // Log nodes to help identify parts (for debugging purposes)
+    // Apply Materials based on Node Names
     useEffect(() => {
-        console.log("Loaded GLTF Nodes:", nodes);
-        console.log("Loaded GLTF Materials:", materials);
+        if (!nodes) return;
 
-        // Auto-apply emission texture if we find a matching material or just apply to everything for now to test
-        scene.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-                const mesh = child as THREE.Mesh;
-                if (mesh.material) {
-                    // Try to enhance materials
-                    // Cast to StandardMaterial to check properties safely
-                    const mat = mesh.material as THREE.MeshStandardMaterial;
-                    if (mat.emissive !== undefined) {
-                        mat.emissiveMap = textures.emission;
-                        mat.emissive = new THREE.Color(1, 1, 1);
-                        mat.emissiveIntensity = 2;
-                        mat.needsUpdate = true;
-                    }
-                }
+        Object.keys(nodes).forEach((key) => {
+            const node = nodes[key] as THREE.Mesh;
+            if (!node.isMesh) return;
+
+            // 1. Lens (Glass)
+            if (key === 'Lens') {
+                node.material = new THREE.MeshPhysicalMaterial({
+                    color: '#ffffff',
+                    roughness: 0.15,
+                    transmission: 1,   // Glass-like
+                    thickness: 0.5,
+                    ior: 1.5,
+                    clearcoat: 1,
+                    transparent: true,
+                    opacity: 1
+                });
+                node.castShadow = false;
+                node.receiveShadow = false;
+            }
+            // 2. Casing (White Plastic)
+            else if (key.includes('Eyeball_Segment_Low_Poly')) {
+                node.material = new THREE.MeshStandardMaterial({
+                    color: '#f5f5f5',
+                    roughness: 0.3,
+                    metalness: 0.1,
+                });
+                node.castShadow = true;
+                node.receiveShadow = true;
+            }
+            // 3. Internal LED Sphere (Emission)
+            else if (key.includes('Sphere026')) {
+                // Apply emission map logic
+                const mat = new THREE.MeshStandardMaterial({
+                    color: '#101010', // Dark base
+                    metalness: 0.9,
+                    roughness: 0.2,
+                    emissiveMap: textures.emission,
+                    emissive: new THREE.Color(1, 0.2, 0.2), // Red tint by default? Or white? Let's stick to white or slight red.
+                    emissiveIntensity: 4
+                });
+                node.material = mat;
+            }
+            // 4. Everything else (Internal mechanisms -> Dark Metal)
+            else {
+                node.material = new THREE.MeshStandardMaterial({
+                    color: '#202020',
+                    roughness: 0.4,
+                    metalness: 0.8,
+                });
             }
         });
-    }, [nodes, materials, scene, textures.emission]);
+
+    }, [nodes, textures.emission]);
 
     // Current rotation for smoothing
     const currentRotation = useRef(new THREE.Vector2(0, 0));
@@ -106,15 +140,6 @@ export default function Eye({ position }: EyeProps) {
             <group ref={groupRef}>
                 <primitive object={clone} scale={[1, 1, 1]} />
             </group>
-            {/* Debug Overlay for Node Names */}
-            <Html position={[0, 2, 0]} center>
-                <div style={{ background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', fontSize: '10px', width: '300px', maxHeight: '400px', overflow: 'auto' }}>
-                    <strong>Nodes:</strong>
-                    {Object.keys(nodes).map((key) => (
-                        <div key={key}>{key}</div>
-                    ))}
-                </div>
-            </Html>
         </group>
     );
 }
