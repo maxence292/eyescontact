@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import { useEyeState } from "@/hooks/useEyeState";
 
 interface EyeProps {
@@ -14,6 +15,15 @@ export default function Eye({ position }: EyeProps) {
     const eyeballRef = useRef<THREE.Group>(null);
     const topLidRef = useRef<THREE.Mesh>(null);
     const bottomLidRef = useRef<THREE.Mesh>(null);
+
+    // Load Textures
+    const textures = useTexture({
+        sclera: '/textures/sclera.png',
+        iris: '/textures/iris.png',
+    });
+    // Ensure textures are center-aligned if needed, though default UVs should work
+    textures.iris.colorSpace = THREE.SRGBColorSpace;
+    textures.sclera.colorSpace = THREE.SRGBColorSpace;
 
     // State for animation
     const blinkState = useRef({ isBlinking: false, startTime: 0, duration: 0.1 });
@@ -181,9 +191,10 @@ export default function Eye({ position }: EyeProps) {
                     onPointerOut={() => document.body.style.cursor = 'auto'}
                 >
                     <sphereGeometry args={[SCLERA_RADIUS, 64, 64]} />
-                    {/* Porcelain-like Sclera */}
+                    {/* Porcelain-like Sclera with Texture */}
                     <meshPhysicalMaterial
-                        color="#fff0e5" // Slightly warm white
+                        map={textures.sclera}
+                        color="#ffffff"
                         roughness={0.2}
                         metalness={0.1}
                         transmission={0}
@@ -192,15 +203,18 @@ export default function Eye({ position }: EyeProps) {
                     />
                 </mesh>
 
-                {/* Iris - Multi-layered */}
+                {/* Iris - Multi-layered with Texture */}
                 <mesh ref={irisRef} position={[0, 0, SCLERA_RADIUS - 0.05]} rotation={[0, 0, 0]}>
                     <circleGeometry args={[IRIS_RADIUS, 64]} />
-                    <meshStandardMaterial color="#3b82f6" roughness={0.4} metalness={0.2} side={THREE.DoubleSide} />
-                    {/* Inner Iris Detail */}
-                    <mesh position={[0, 0, 0.01]}>
-                        <ringGeometry args={[PUPIL_RADIUS, IRIS_RADIUS - 0.05, 64]} />
-                        <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
-                    </mesh>
+                    <meshStandardMaterial
+                        map={textures.iris}
+                        color="#ffffff" // White so texture shows true colors
+                        roughness={0.4}
+                        metalness={0.2}
+                        side={THREE.DoubleSide}
+                    />
+                    {/* Inner Iris Detail - Removed/Reduced since texture has it */}
+                    {/* Kept pupil mesh separate for scaling animation */}
                 </mesh>
 
                 {/* Pupil */}
